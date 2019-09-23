@@ -129,7 +129,7 @@ function main(){
     
     var allevents = component.getAllSubcomponents("vevent");
     var calName = component.getFirstPropertyValue("name");
-    allevents.forEach(function(event){event.addPropertyWithValue("parentCal", calName); })
+    if (calName != null) allevents.forEach(function(event){event.addPropertyWithValue("parentCal", calName); });
     vevents = [].concat(allevents, vevents);
   }
   vevents.forEach(function(event){ icsEventIds.push(event.getFirstPropertyValue('uid').toString()); });
@@ -226,7 +226,7 @@ function main(){
             newEvent.summary = organizer + ": " + vevent.summary;
         }
         
-        if (addCalToTitle){
+        if (addCalToTitle && event.hasProperty('parentCal')){
           var calName = event.getFirstPropertyValue('parentCal');
           
           if (calName != null)
