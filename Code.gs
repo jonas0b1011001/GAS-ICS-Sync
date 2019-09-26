@@ -8,35 +8,11 @@
 * 3) Enable "Calendar API v3" at "Resources" > "Advanced Google Services" > "Calendar API v3" 
 * 4) Click in the menu "Run" > "Run function" > "Install" and authorize the program
 *    (For steps to follow in authorization, see this video: https://youtu.be/_5k10maGtek?t=1m22s )
-*
-*
-* **To stop Script from running click in the menu "Run" > "Run function" > "Uninstall"
-*
-*=========================================
-*               SETTINGS
-*=========================================
 */
-
-var targetCalendarName = "Full API TEST";           // The name of the Google Calendar you want to add events to
-var sourceCalendarURLs = [""
-                         ];            // The ics/ical urls that you want to get events from ["url","url","url"]
-
-var howFrequent = 15;                  // What interval (minutes) to run this script on to check for new events
-var addEventsToCalendar = true;        // If you turn this to "false", you can check the log (View > Logs) to make sure your events are being read correctly before turning this on
-var modifyExistingEvents = true;       // If you turn this to "false", any event in the feed that was modified after being added to the calendar will not update
-var removeEventsFromCalendar = true;   // If you turn this to "true", any event in the calendar not found in the feed will be removed.
-var addAlerts = true;                  // Whether to add the ics/ical alerts as notifications on the Google Calendar events, this will override the standard reminders specified by the target calendar.
-var addOrganizerToTitle = false;       // Whether to prefix the event name with the event organiser for further clarity 
-var addCalToTitle = true;              // Whether to add the source calendar to title
-var addTasks = false;
-
-var emailWhenAdded = false;            // Will email you when an event is added to your calendar
-var emailWhenModified = false;         // Will email you when an existing event is updated in your calendar
-var email = "";                        // OPTIONAL: If "emailWhenAdded" is set to true, you will need to provide your email
-
 //=====================================================================================================
 //!!!!!!!!!!!!!!!! DO NOT EDIT BELOW HERE UNLESS YOU REALLY KNOW WHAT YOU'RE DOING !!!!!!!!!!!!!!!!!!!!
 //=====================================================================================================
+
 function Install(){
   //Delete any already existing triggers so we don't create excessive triggers
   DeleteAllTriggers();
@@ -62,57 +38,74 @@ function DeleteAllTriggers(){
   }
 }
 
-var targetCalendarId;
-var response = [];
-
 function main(){
+  var log = "Log Output:<br>";
+  var userProperties = PropertiesService.getUserProperties();
+  var tgtCalName = userProperties.getProperty('tgtCalName');
+  var targetCalendar;
+  var sourceCalendarURLs = [userProperties.getProperty('url')];            // The ics/ical urls that you want to get events from ["url","url","url"]
+  var addEventsToCalendar = true;        // If you turn this to "false", you can check the log (View > Logs) to make sure your events are being read correctly before turning this on
+  var modifyExistingEvents = true;       // If you turn this to "false", any event in the feed that was modified after being added to the calendar will not update
+  var removeEventsFromCalendar = true;   // If you turn this to "true", any event in the calendar not found in the feed will be removed.
+  var addAlerts = true;                  // Whether to add the ics/ical alerts as notifications on the Google Calendar events, this will override the standard reminders specified by the target calendar.
+  var addOrganizerToTitle = false;       // Whether to prefix the event name with the event organiser for further clarity 
+  var addCalToTitle = false;             // Whether to add the source calendar to title
+  var addTasks = false;
+  
+  var emailWhenAdded = false;            // Will email you when an event is added to your calendar
+  var emailWhenModified = false;         // Will email you when an existing event is updated in your calendar
+  var email = "";  
+  var targetCalendarId;
+  var response = [];
+  
   //Get URL items
   for each (var url in sourceCalendarURLs){
-    var urlResponse = UrlFetchApp.fetch(url).getContentText();
-    //------------------------ Error checking ------------------------
-    if(urlResponse.includes("That calendar does not exist")){
-      Logger.log("[ERROR] Incorrect ics/ical URL: " + url);
+    try{
+      var urlResponse = UrlFetchApp.fetch(url).getContentText();
+      //------------------------ Error checking ------------------------
+      if(!urlResponse.includes("BEGIN:VCALENDAR")){
+        log += "<br>" + ("[ERROR] Incorrect ics/ical URL: " + url);
+      }
+      else{
+        response.push(urlResponse);
+      }
     }
-    else{
-      response.push(urlResponse);
+    catch (e){
+      log += "<br>" + (e);
     }
   }
-  Logger.log("Syncing " + response.length + " Calendars.");
-  
+  log += "<br>" + ("Syncing " + response.length + " Calendars.");
+
   //Get target calendar information
-  var targetCalendar = Calendar.CalendarList.list().items.filter(function(cal) {
-    return cal.summary == targetCalendarName;
-  })[0];
+  targetCalendar = Calendar.CalendarList.list({minAccessRole: "writer"}).items.filter(function(cal){return (cal.summary == tgtCalName);});
+  targetCalendar = targetCalendar[0];
   
   if(targetCalendar == null){
-    Logger.log("Creating Calendar: " + targetCalendarName);
-    targetCalendar = Calendar.newCalendar();
-    targetCalendar.summary = targetCalendarName;
+    var targetCalendar = Calendar.newCalendar();
+    targetCalendar.summary = tgtCalName;
     targetCalendar.description = "Created by GAS.";
     targetCalendar.timeZone = Calendar.Settings.get("timezone").value;
     targetCalendar = Calendar.Calendars.insert(targetCalendar);
- }
+  }
   targetCalendarId = targetCalendar.id;
   
-  Logger.log("Working on calendar: " + targetCalendar.summary + ", ID: " + targetCalendarId)
+  log += "<br>" + ("Working on calendar: " + targetCalendar.summary + ", ID: " + targetCalendarId)
   
   if (emailWhenAdded && email == "")
     throw "[ERROR] \"emailWhenAdded\" is set to true, but no email is defined";
   //----------------------------------------------------------------
   
   //------------------------ Parse existing events --------------------------
-  
   if(addEventsToCalendar || removeEventsFromCalendar){ 
-    var calendarEvents = Calendar.Events.list(targetCalendarId, {showDeleted: true}).items; 
-    var calendarEventsIds = [] 
-    Logger.log("Grabbed " + calendarEvents.length + " existing Events from " + targetCalendarName); 
+    var calendarEvents = Calendar.Events.list(targetCalendarId, {showDeleted: true}).items;
+    var calendarEventsIds = [];
+    log += "<br>" +  ("Grabbed " + calendarEvents.length + " existing Events from " + tgtCalName); 
     for (var i = 0; i < calendarEvents.length; i++){ 
       calendarEventsIds[i] = calendarEvents[i].iCalUID;
     } 
-    Logger.log("Saved " + calendarEventsIds.length + " existing Event IDs"); 
+    log += "<br>" +  ("Saved " + calendarEventsIds.length + " existing Event IDs"); 
   } 
-
-  //------------------------ Parse ics events --------------------------
+    //------------------------ Parse ics events --------------------------
   var icsEventIds=[];
   var vevents = [];
   var recurringEvents = [];
@@ -129,13 +122,14 @@ function main(){
     
     var allevents = component.getAllSubcomponents("vevent");
     var calName = component.getFirstPropertyValue("name");
-    if (calName != null) allevents.forEach(function(event){event.addPropertyWithValue("parentCal", calName); });
+    if (calName != null)
+      allevents.forEach(function(event){event.addPropertyWithValue("parentCal", calName); });
     vevents = [].concat(allevents, vevents);
   }
-  vevents.forEach(function(event){ icsEventIds.push(event.getFirstPropertyValue('uid').toString()); });
+  vevents.forEach(function(event){ icsEventIds.push(event.getFirstPropertyValue('uid').toString()); });  
   
   if (addEventsToCalendar || modifyExistingEvents){
-    Logger.log("---Processing " + vevents.length + " Events.");
+    log += "<br>" +  ("---Processing " + vevents.length + " Events.");
     var calendarTz = Calendar.Settings.get("timezone").value;
     
     for each (var event in vevents){
@@ -186,14 +180,14 @@ function main(){
           //normal Event
           var tzid = vevent.startDate.timezone;
           if (tzids.indexOf(tzid) == -1){
-            Logger.log("Timezone " + tzid + " unsupported!");
+            log += "<br>" + ("Timezone " + tzid + " unsupported!");
             if (tzid in tzidreplace){
               tzid = tzidreplace[tzid];
             }
             else{
               tzid = calendarTz; 
             }
-            Logger.log("Using Timezone " + tzid + "!");
+            log += "<br>" + ("Using Timezone " + tzid + "!");
           };
           newEvent = {
             start: {
@@ -228,9 +222,7 @@ function main(){
         
         if (addCalToTitle && event.hasProperty('parentCal')){
           var calName = event.getFirstPropertyValue('parentCal');
-          
-          if (calName != null)
-            newEvent.summary = calName + ": " + vevent.summary;
+          newEvent.summary = calName + ": " + vevent.summary;
         }
         
         newEvent.iCalUID = vevent.uid;
@@ -268,7 +260,7 @@ function main(){
         if (event.hasProperty('recurrence-id')){
           
           newEvent.recurringEventId = event.getFirstPropertyValue('recurrence-id').toString();
-          Logger.log("--Saving Eventinstance for later");
+          log += "<br>" + ("--Saving Eventinstance for later");
           recurringEvents.push(newEvent);
           
         }
@@ -280,27 +272,27 @@ function main(){
             switch (requiredAction){
               case "insert":
                 if (addEventsToCalendar){
-                  Logger.log("Adding new Event " + newEvent.iCalUID);
+                  log += "<br>" + ("Adding new Event " + newEvent.iCalUID);
                   try{
                     newEvent = Calendar.Events.insert(newEvent, targetCalendarId);
                     if (emailWhenAdded){
                       GmailApp.sendEmail(email, "New Event \"" + newEvent.summary + "\" added", "New event added to calendar \"" + targetCalendarName + "\" at " + vevent.start.toString());
                     }
                   }catch(error){
-                    Logger.log("Error, Retrying..." + error );
+                    log += "<br>" + ("Error, Retrying..." + error );
                   }
                 }
                 break;
               case "update":
                 if (modifyExistingEvents){
-                  Logger.log("Updating existing Event!");
+                  log += "<br>" + ("Updating existing Event!");
                   try{
                     newEvent = Calendar.Events.update(newEvent, targetCalendarId, calendarEvents[index].id);
                     if (emailWhenModified){
                       GmailApp.sendEmail(email, "Event \"" + newEvent.summary + "\" modified", "Event was modified in calendar \"" + targetCalendarName + "\" at " + vevent.start.toString());
                     }
                   }catch(error){
-                    Logger.log("Error, Retrying..." + error);
+                    log += "<br>" + ("Error, Retrying..." + error);
                   }
                 }
                 break;
@@ -312,37 +304,37 @@ function main(){
       }
       else{
         //Skipping
-        Logger.log("Event unchanged. No action required.")
+        log += "<br>" + ("Event unchanged. No action required.")
       }
     }
-    Logger.log("---done!");
+    log += "<br>" + ("---done!");
   }
   
   //-------------- Remove old events from calendar -----------
   if(removeEventsFromCalendar){
-    Logger.log("Checking " + calendarEvents.length + " events for removal");
+    log += "<br>" + ("Checking " + calendarEvents.length + " events for removal");
     for (var i = 0; i < calendarEvents.length; i++){
       var currentID = calendarEventsIds[i];
       var feedIndex = icsEventIds.indexOf(currentID);
       
       if(feedIndex  == -1 && calendarEvents[i].status != "cancelled"){
-        Logger.log("Deleting old Event " + currentID);
+        log += "<br>" + ("Deleting old Event " + currentID);
         try{
           Calendar.Events.remove(targetCalendarId, calendarEvents[i].id);
         }catch (err){
-          Logger.log(err);
+          log += "<br>" + (err);
         }
       }
     }
-    Logger.log("---done!");
+    log += "<br>" + ("---done!");
   }
   //----------------------------------------------------------------
   if (addTasks)
     parseTasks();
   //------Add Recurring Event Instances-----------
-  Logger.log("---Processing " + recurringEvents.length + " Recurrence Instances!");
+  log += "<br>" + ("---Processing " + recurringEvents.length + " Recurrence Instances!");
   for each (var recEvent in recurringEvents){
-    Logger.log("-----" + recEvent.recurringEventId.substring(0,10));
+    log += "<br>" + ("-----" + recEvent.recurringEventId.substring(0,10));
     var addedEvents = Calendar.Events.list(targetCalendarId, {iCalUID: recEvent.iCalUID}).items;
     if (addedEvents.length == 0){ //Initial Event has Recurrence-id
       try{
@@ -359,11 +351,12 @@ function main(){
         try{
           Calendar.Events.patch(recEvent, targetCalendarId, addedEvents[0].id);
         }catch(error){
-          Logger.log(error); 
+          log += "<br>" + (error); 
         }
       }
     }
   }
+  return log;
 }
 
 function ParseRecurrenceRule(vevent){
@@ -466,11 +459,11 @@ function parseTasks(){
   
   var existingTasks = Tasks.Tasks.list(taskList.id).items || [];
   var existingTasksIds = []
-  Logger.log("Grabbed " + existingTasks.length + " existing Tasks from " + taskList.title);
+  log += "<br>" + ("Grabbed " + existingTasks.length + " existing Tasks from " + taskList.title);
   for (var i = 0; i < existingTasks.length; i++){
     existingTasksIds[i] = existingTasks[i].id;
   }
-  Logger.log("Saved " + existingTasksIds.length + " existing Task IDs");
+  log += "<br>" + ("Saved " + existingTasksIds.length + " existing Task IDs");
   
   var icsTasksIds = [];
   var vtasks = [];
@@ -482,7 +475,7 @@ function parseTasks(){
     vtasks = [].concat(component.getAllSubcomponents("vtodo"), vtasks);
   }
   vtasks.forEach(function(task){ icsTasksIds.push(task.getFirstPropertyValue('uid').toString()); });
-  Logger.log("---Processing " + vtasks.length + " Tasks.");
+  log += "<br>" + ("---Processing " + vtasks.length + " Tasks.");
   
   for each (var task in vtasks){
     var newtask = Tasks.newTask();
@@ -492,22 +485,22 @@ function parseTasks(){
     newtask.due = (d.getFullYear()) + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + "T" + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2)+"Z";
     Tasks.Tasks.insert(newtask, taskList.id);
   };
-  Logger.log("---Done!");
+  log += "<br>" + ("---Done!");
   
   //-------------- Remove old Tasks -----------
   // ID can't be used as identifier as the API reassignes a random id at task creation
   if(removeEventsFromCalendar){
-    Logger.log("Checking " + existingTasksIds.length + " tasks for removal");
+    log += "<br>" + ("Checking " + existingTasksIds.length + " tasks for removal");
     for (var i = 0; i < existingTasksIds.length; i++){
       var currentID = existingTasks[i].id;
       var feedIndex = icsTasksIds.indexOf(currentID);
       
       if(feedIndex  == -1){
-        Logger.log("Deleting old Task " + currentID);
+        log += "<br>" + ("Deleting old Task " + currentID);
         Tasks.Tasks.remove(taskList.id, currentID);
       }
     }
-    Logger.log("---Done!");
+    log += "<br>" + ("---Done!");
   }
   //----------------------------------------------------------------
 }
@@ -549,4 +542,30 @@ function eventChanged(event, icsEvent, calEvent){
 //    return true;
   
   return false;
+}
+
+function doGet() {
+  var html = HtmlService.createTemplateFromFile("script").evaluate();
+  html.setTitle("ICAL to Google Calendar");
+  return html;
+}
+
+function getSettings(){
+  var userProperties = PropertiesService.getUserProperties();
+  var calendars = Calendar.CalendarList.list({minAccessRole: "writer"}).items.map(function(cal){return cal.summary;});
+  var tgtCalName = userProperties.getProperty('tgtCalName');
+  var url = userProperties.getProperty('url');
+  return [calendars, tgtCalName, url];
+}
+
+function setSettings(tgtCalName, url){
+  var userProperties = PropertiesService.getUserProperties();
+  userProperties.setProperty('tgtCalName', tgtCalName);
+  userProperties.setProperty('url', url);
+}
+
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename)
+      .setSandboxMode(HtmlService.SandboxMode.IFRAME)
+      .getContent();
 }

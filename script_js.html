@@ -1,0 +1,39 @@
+<script>
+window.onload = function(){
+      google.script.run.withSuccessHandler(showSettings).getSettings();
+    }
+    
+function showSettings(settings){
+    var options;
+    for (var i=0; i<settings[0].length; i++) {
+    options += "<option>" + settings[0][i] + "</option>";
+    }
+    document.getElementById("tgtCalendarList").innerHTML = options;
+    document.getElementById("tgtCalendarText").value = settings[1]
+    document.getElementById("url").value = settings[2];
+}
+
+function saveSettings(){
+document.getElementById("loading").style.display = "block";
+var tgtCalendar = document.getElementById("tgtCalendarText").value;
+var url = document.getElementById("url").value;
+google.script.run.withSuccessHandler(startSync).setSettings(tgtCalendar, url);
+}
+
+function startSync(){
+
+google.script.run.withSuccessHandler(success).withFailureHandler(fail).main();
+}
+
+function success(retVal){
+document.getElementById("loading").style.display = "none";
+document.getElementById("log").style.display = "block"
+document.getElementById("log").innerHTML = "<p>" + retVal + "</p>";
+}
+
+function fail(){
+document.getElementById("loading").style.display = "none";
+document.getElementById("log").style.display = "block"
+document.getElementById("log").innerHTML = "Sync failed";
+}
+</script>

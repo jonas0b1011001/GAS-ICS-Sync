@@ -1,0 +1,17 @@
+<?!= include('script_js'); ?>
+<?!= include('script_css'); ?>
+<html>
+  <body>
+  <h1>ICS Sync Script</h1>
+  <h2>Sync any ical calendar to your google calendar in customizable intervals.</h2>
+    <div id="settings">
+    Target Calendar: <input type="text" list="tgtCalendarList" id="tgtCalendarText"/>
+    <datalist id="tgtCalendarList">
+    </datalist><br>
+    Source Calendar URL: <input type="text" id="url" width="400px"><br>
+<input id="clickMe" type="button" value="Sync!" onclick="saveSettings();" />
+<div id="log"></div>
+    </div>
+    <div id="loading"></div>
+  </body>
+</html>
