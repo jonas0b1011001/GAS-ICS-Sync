@@ -224,7 +224,7 @@ function main(){
           var name = ParseAttendeeName(att.toICALString());
           var mail = ParseAttendeeMail(att.toICALString());
           var resp = ParseAttendeeResp(att.toICALString());
-          newEvent.attendees.push({'displayName': name, 'email': mail, 'responseStatus': resp.toLowerCase()});
+          newEvent.attendees.push({'displayName': (name==null)?(mail):(name), 'email': mail, 'responseStatus': resp.toLowerCase()});
         }
         if (event.hasProperty('status')){
           newEvent.status = event.getFirstPropertyValue('status').toString().toLowerCase();
@@ -406,7 +406,7 @@ function ParseRecurrenceRule(vevent, utcOffset){
 }
 
 function ParseAttendeeName(veventString){
-  var nameMatch = RegExp("(CN=)([^;$]*)(:MAILTO:)([^;$]*)", "g").exec(veventString);
+  var nameMatch = RegExp("([cC][nN]=)([^;$:]*)", "g").exec(veventString);
   if (nameMatch != null && nameMatch.length > 1)
     return nameMatch[2];
   else
@@ -414,9 +414,9 @@ function ParseAttendeeName(veventString){
 }
 
 function ParseAttendeeMail(veventString){
-  var mailMatch = RegExp("(CN=)([^;$]*)(:MAILTO:)([^;$]*)", "g").exec(veventString);
+  var mailMatch = RegExp("(:[mM][aA][iI][lL][tT][oO]:)([^;$:]*)", "g").exec(veventString);
   if (mailMatch != null && mailMatch.length > 1)
-    return mailMatch[4];
+    return mailMatch[2];
   else
     return null;
 }
@@ -424,6 +424,9 @@ function ParseAttendeeMail(veventString){
 function ParseAttendeeResp(veventString){
   var respMatch = RegExp("(PARTSTAT=)([^;$]*)", "g").exec(veventString);
   if (respMatch != null && respMatch.length > 1)
+    if ( respMatch[2].toUpperCase() in ['NEEDS-ACTION'] ) { respMatch[2] = 'NeedsAction'; }
+    if ( respMatch[2].toUpperCase() in ['COMPLETED'] ) { respMatch[2] = 'ACCEPTED'; }
+    if ( respMatch[2].toUpperCase() in ['DELEGATED','IN-PROCESS'] ) { respMatch[2] = 'TENTATIVE'; }
     return respMatch[2];
   else
     return null;
