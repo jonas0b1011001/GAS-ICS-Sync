@@ -221,10 +221,17 @@ function main(){
         
         newEvent.attendees = [];
         for each (var att in vevent.attendees){
-          var name = ParseAttendeeName(att.toICALString());
           var mail = ParseAttendeeMail(att.toICALString());
-          var resp = ParseAttendeeResp(att.toICALString());
-          newEvent.attendees.push({'displayName': (name==null)?(mail):(name), 'email': mail, 'responseStatus': resp});
+          if (mail!=null){
+            var newAttendee = {'email':mail};
+            var name = ParseAttendeeName(att.toICALString());
+            if (name!=null)
+              newAttendee['displayName'] = name;
+            var resp = ParseAttendeeResp(att.toICALString());
+            if (resp!=null)
+              newAttendee['responseStatus'] = resp;
+            newEvent.attendees.push(newAttendee);
+          }
         }
         if (event.hasProperty('status')){
           newEvent.status = event.getFirstPropertyValue('status').toString().toLowerCase();
