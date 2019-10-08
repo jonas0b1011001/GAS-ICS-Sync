@@ -424,9 +424,9 @@ function ParseAttendeeMail(veventString){
 function ParseAttendeeResp(veventString){
   var respMatch = RegExp("(PARTSTAT=)([^;$]*)", "g").exec(veventString);
   if (respMatch != null && respMatch.length > 1)
-    if ( respMatch[2].toUpperCase() in ['NEEDS-ACTION'] ) { respMatch[2] = 'NeedsAction'; }
-    if ( respMatch[2].toUpperCase() in ['COMPLETED'] ) { respMatch[2] = 'ACCEPTED'; }
-    if ( respMatch[2].toUpperCase() in ['DELEGATED','IN-PROCESS'] ) { respMatch[2] = 'TENTATIVE'; }
+    if ( respMatch[2].toUpperCase().indexOf(['NEEDS-ACTION']) ) { respMatch[2] = 'NeedsAction'; }
+    if ( respMatch[2].toUpperCase().indexOf(['COMPLETED']) ) { respMatch[2] = 'ACCEPTED'; }
+    if ( respMatch[2].toUpperCase().indexOf(['DELEGATED','IN-PROCESS']) ) { respMatch[2] = 'TENTATIVE'; }
     return respMatch[2];
   else
     return null;
