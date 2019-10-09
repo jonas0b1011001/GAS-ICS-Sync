@@ -108,12 +108,12 @@ function main(){
   //------------------------ Parse existing events --------------------------
   
   if(addEventsToCalendar || removeEventsFromCalendar){ 
-    var calendarEvents = Calendar.Events.list(targetCalendarId, {showDeleted: true, privateExtendedProperty: "fromGAS=true"}).items;
+    var calendarEvents = Calendar.Events.list(targetCalendarId, {showDeleted: false, privateExtendedProperty: "fromGAS=true"}).items;
     var calendarEventsIds = [] 
     var calendarEventsMD5s = []
     Logger.log("Grabbed " + calendarEvents.length + " existing Events from " + targetCalendarName); 
     for (var i = 0; i < calendarEvents.length; i++){ 
-      calendarEventsIds[i] = calendarEvents[i].iCalUID;
+      calendarEventsIds[i] = calendarEvents[i].extendedProperties.private["id"];
       calendarEventsMD5s[i] = calendarEvents[i].extendedProperties.private["MD5"];
     } 
     Logger.log("Saved " + calendarEventsIds.length + " existing Event IDs"); 
@@ -151,13 +151,13 @@ function main(){
       event.removeProperty('dtstamp');
       var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, event.toString()).toString();
       if(calendarEventsMD5s.indexOf(digest) >= 0){
-        Logger.log("Event unchanged. Skipping!");
+        Logger.log("Skipping unchanged Event " + event.getFirstPropertyValue('uid').toString());
         return;
       }  
       var icalEvent = new ICAL.Event(event);
       var newEvent = Calendar.newEvent();
-      
-      var needsUpdate = (calendarEventsIds.indexOf(icalEvent.uid) >= 0);
+      var index = calendarEventsIds.indexOf(icalEvent.uid);
+      var needsUpdate = (index >= 0);
       if(icalEvent.startDate.isDate){
         //All Day Event
         if (icalEvent.startDate.compare(icalEvent.endDate) == 0){
@@ -230,7 +230,6 @@ function main(){
         newEvent.summary = calName + ": " + icalEvent.summary;
       }
       
-      newEvent.iCalUID = icalEvent.uid;
       newEvent.description = icalEvent.description;
       newEvent.location = icalEvent.location;
       if (event.hasProperty('class')){
@@ -268,7 +267,7 @@ function main(){
         newEvent.recurrence = ParseRecurrenceRule(event, calendarUTCOffset);
       }
       
-      newEvent.extendedProperties = {private: {MD5: digest, fromGAS: "true"}};
+      newEvent.extendedProperties = {private: {MD5: digest, fromGAS: "true", id: icalEvent.uid}};
       
       if (event.hasProperty('recurrence-id')){
         newEvent.recurringEventId = event.getFirstPropertyValue('recurrence-id').toString();
@@ -282,7 +281,7 @@ function main(){
           Utilities.sleep(retries * 100);
           if (needsUpdate){
             if (modifyExistingEvents){
-              Logger.log("Updating existing Event " + newEvent.iCalUID);
+              Logger.log("Updating existing Event " + newEvent.extendedProperties.private["id"]);
               try{
                 newEvent = Calendar.Events.update(newEvent, targetCalendarId, calendarEvents[index].id);
               }
@@ -295,7 +294,7 @@ function main(){
           }
           else{
             if (addEventsToCalendar){
-              Logger.log("Adding new Event " + newEvent.iCalUID);
+              Logger.log("Adding new Event " + newEvent.extendedProperties.private["id"]);
               try{
                 newEvent = Calendar.Events.insert(newEvent, targetCalendarId);
               }
@@ -320,7 +319,7 @@ function main(){
       var currentID = calendarEventsIds[i];
       var feedIndex = icsEventIds.indexOf(currentID);
       
-      if(feedIndex  == -1 && calendarEvents[i].status != "cancelled"){
+      if(feedIndex  == -1){
         Logger.log("Deleting old Event " + currentID);
         try{
           Calendar.Events.remove(targetCalendarId, calendarEvents[i].id);
