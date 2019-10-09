@@ -22,6 +22,7 @@ var sourceCalendarURLs = [""
                          ];            // The ics/ical urls that you want to get events from ["url","url","url"]
 
 var howFrequent = 15;                  // What interval (minutes) to run this script on to check for new events
+var onlyFutureEvents = false;          // If you turn this to "false", all events (past as well as future will be copied over)
 var addEventsToCalendar = true;        // If you turn this to "false", you can check the log (View > Logs) to make sure your events are being read correctly before turning this on
 var modifyExistingEvents = true;       // If you turn this to "false", any event in the feed that was modified after being added to the calendar will not update
 var removeEventsFromCalendar = true;   // If you turn this to "true", any event created by the script that is not found in the feed will be removed.
@@ -66,6 +67,10 @@ var targetCalendarId;
 var response = [];
 
 function main(){
+  //Retreve milliseconds from 1970 of StartUpdate
+  if (onlyFutureEvents)
+    var StartUpdate = (new Date()).getTime();
+
   //Get URL items
   for each (var url in sourceCalendarURLs){
     try{
@@ -155,6 +160,11 @@ function main(){
         return;
       }  
       var icalEvent = new ICAL.Event(event);
+      if (onlyFutureEvents && (icalEvent.endDate.toJSDate().getTime()<StartUpdate)) {
+        icsEventIds.splice(icsEventIds.indexOf(event.getFirstPropertyValue('uid').toString()),1);
+        Logger.log("Skipping previous Event " + event.getFirstPropertyValue('uid').toString());
+        return;
+      }
       var newEvent = Calendar.newEvent();
       var index = calendarEventsIds.indexOf(icalEvent.uid);
       var needsUpdate = (index >= 0);
