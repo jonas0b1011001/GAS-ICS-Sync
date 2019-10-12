@@ -183,25 +183,29 @@ function processEvent(event, calendarTz, calendarEventsMD5s){
     if(["opaque","transparent"].indexOf(transparency) > -1)
       newEvent.transparency = transparency;
   }
-  newEvent.reminders = {
-    'useDefault': true
-  };
   if (addAlerts){
     var valarms = event.getAllSubcomponents('valarm');
-    var overrides = [];
-    for each (var valarm in valarms){
-      var trigger = valarm.getFirstPropertyValue('trigger').toString();
-      if (overrides.length < 5){ //Google supports max 5 reminder-overrides
-        var timer = ParseNotificationTime(trigger)/60;
-        if (0 <= timer <= 40320)
-          overrides.push({'method': 'popup', 'minutes': timer});
-      }
-    }
-    if (overrides.length > 0){
+    if (valarms.length == 0){
       newEvent.reminders = {
-        'useDefault': false,
-        'overrides': overrides
+        'useDefault': true
       };
+    }
+    else{
+      var overrides = [];
+      for each (var valarm in valarms){
+        var trigger = valarm.getFirstPropertyValue('trigger').toString();
+        if (overrides.length < 5){ //Google supports max 5 reminder-overrides
+          var timer = ParseNotificationTime(trigger)/60;
+          if (0 <= timer <= 40320)
+            overrides.push({'method': 'popup', 'minutes': timer});
+        }
+      }
+      if (overrides.length > 0){
+        newEvent.reminders = {
+          'useDefault': false,
+          'overrides': overrides
+        };
+      }
     }
   }
   
