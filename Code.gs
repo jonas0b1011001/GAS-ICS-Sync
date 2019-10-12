@@ -33,11 +33,11 @@ function Uninstall(){
 }
 
 function startSync(){
-  //Get URL items
+  //------------------------ Fetch URL items ------------------------
   var responses = fetchSourceCalendars();
   Logger.log("Syncing " + responses.length + " Calendars.");
   
-  //Get target calendar information
+  //------------------------ Get target calendar information------------------------
   var targetCalendar = setupTargetCalendar();
   var targetCalendarId = targetCalendar.id;
   Logger.log("Working on calendar: " + targetCalendarId);
@@ -53,19 +53,17 @@ function startSync(){
     Logger.log("Fetched " + calendarEvents.length + " existing Events from " + targetCalendarName); 
     for (var i = 0; i < calendarEvents.length; i++){
       if (calendarEvents[i].extendedProperties != null){
-        if (calendarEvents[i].extendedProperties.private["rec-id"] == null){
-          calendarEventsIds[i] = calendarEvents[i].extendedProperties.private["id"];
-          calendarEventsMD5s[i] = calendarEvents[i].extendedProperties.private["MD5"];
-        }
+        calendarEventsIds[i] = calendarEvents[i].extendedProperties.private["rec-id"] || calendarEvents[i].extendedProperties.private["id"];
+        calendarEventsMD5s[i] = calendarEvents[i].extendedProperties.private["MD5"];
       }
-    } 
-    
-    //Parse ics events
+    }
+    //------------------------ Parse ical events --------------------------
     var icsEventsIds = [];
     var vevents = parseResponses(responses, icsEventsIds);
     Logger.log("Parsed " + vevents.length + " events from ical sources.");
   }
   
+  //------------------------ Process ical events ------------------------
   if (addEventsToCalendar || modifyExistingEvents){
     Logger.log("Processing " + vevents.length + " Events.");
     var calendarTz = Calendar.Settings.get("timezone").value;
@@ -73,12 +71,15 @@ function startSync(){
     var recurringEvents = [];
     
     vevents.forEach(function(e){
+      //------------------------ Create the event object ------------------------
       var newEvent = processEvent(e, calendarTz, calendarEventsMD5s);
       if (newEvent == null)
         return;
       var index = calendarEventsIds.indexOf(newEvent.extendedProperties.private["id"]);
       var needsUpdate = (index > -1);
       
+      //------------------------ save instance overrides ------------------------
+      //----------- to make sure the parent event is actually created -----------
       if (e.hasProperty('recurrence-id')){
         newEvent.recurringEventId = e.getFirstPropertyValue('recurrence-id').toString();
         Logger.log("Saving event instance for later: " + newEvent.recurringEventId);
@@ -87,6 +88,7 @@ function startSync(){
         return;
       }
       else{
+        //------------------------ Send event object to gcal ------------------------
         var retries = 0;
         do{
           Utilities.sleep(retries * 100);
@@ -119,21 +121,21 @@ function startSync(){
           retries++;
         }while(retries < 5 && (typeof newEvent.etag === "undefined"));
       }
-    }),
-      Logger.log("---done!");
-  }
-  
-  //-------------- Remove old events from calendar -----------
-  if(removeEventsFromCalendar){
-    Logger.log("Checking " + calendarEvents.length + " events for removal");
-    processEventCleanup(calendarEvents, calendarEventsIds, icsEventsIds, targetCalendarId)
+    });
     Logger.log("---done!");
   }
-  //----------------------------------------------------------------
+  
+  //------------------------ Remove old events from calendar ------------------------
+  if(removeEventsFromCalendar){
+    Logger.log("Checking " + calendarEvents.length + " events for removal");
+    processEventCleanup(calendarEvents, calendarEventsIds, icsEventsIds, targetCalendarId);
+    Logger.log("---done!");
+  }
+  //------------------------ Process Tasks ------------------------
   if (addTasks){
     processTasks(responses);
   }
-  //------Add Recurring Event Instances-----------
+  //------------------------ Add Recurring Event Instances ------------------------
   Logger.log("---Processing " + recurringEvents.length + " Recurrence Instances!");
   for each (var recEvent in recurringEvents){
     processEventInstance(recEvent, targetCalendarId);

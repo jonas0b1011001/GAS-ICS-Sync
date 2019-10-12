@@ -80,7 +80,7 @@ function processEvent(event, calendarTz, calendarEventsMD5s){
   event.removeProperty('dtstamp');
   var icalEvent = new ICAL.Event(event);
   var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, icalEvent.toString()).toString();
-  if(calendarEventsMD5s.indexOf(digest) >= 0 && !event.hasProperty('recurrence-id')){
+  if(calendarEventsMD5s.indexOf(digest) >= 0){
     Logger.log("Skipping unchanged Event " + event.getFirstPropertyValue('uid').toString());
     return;
   }
@@ -220,29 +220,23 @@ function processEvent(event, calendarTz, calendarEventsMD5s){
 
 function processEventInstance(recEvent, targetCalendarId){
   Logger.log("-----" + recEvent.recurringEventId.substring(0,10));
-  var existingEventInstances = Calendar.Events.list(targetCalendarId, {singleEvents: true, privateExtendedProperty: "fromGAS=true", privateExtendedProperty: "id=" + recEvent.extendedProperties.private['id']}).items;
-  Logger.log(existingEventInstances.length);
-  if (existingEventInstances.length == 0){ //Initial Event has Recurrence-id
+  var recIDStart = new Date(recEvent.recurringEventId);
+  recIDStart = new ICAL.Time.fromJSDate(recIDStart, true);
+  var eventInstanceToPatch = Calendar.Events.list(targetCalendarId, {timeZone:"etc/GMT", singleEvents: true, privateExtendedProperty: "fromGAS=true", privateExtendedProperty: "id=" + recEvent.extendedProperties.private['id']}).items.filter(function(item){
+    var origStart = item.originalStartTime.dateTime || item.originalStartTime.date
+    var instanceStart = new ICAL.Time.fromString(origStart);
+    return (instanceStart.compare(recIDStart) == 0);
+  });
+  if (eventInstanceToPatch.length == 0){
+    Logger.log("No Instance found, skipping!");
+  }
+  else{
     try{
-      Calendar.Events.insert(recEvent, targetCalendarId);
+      Logger.log("Patching event instance " + eventInstanceToPatch[0].id)
+      Calendar.Events.patch(recEvent, targetCalendarId, eventInstanceToPatch[0].id);
     }
     catch(error){
-    }
-  }
-  else{ //Find the instance we need to update
-    var eventInstanceMatches = existingEventInstances.filter(function(event){
-      var recId = event.extendedProperties.private['rec-id'] || "";
-      var start = event.start.date || event.start.dateTime;
-      return (recId.toString().includes(recEvent.recurringEventId) || event.id.includes(recEvent.recurringEventId) || start.includes(recEvent.recurringEventId));
-    });
-    Logger.log("Instance matched: " + eventInstanceMatches.length);
-    if (eventInstanceMatches.length > 0){
-      try{
-        Calendar.Events.patch(recEvent, targetCalendarId, eventInstanceMatches[0].id);
-      }
-      catch(error){
-        Logger.log(error); 
-      }
+      Logger.log(error); 
     }
   }
 }
@@ -252,7 +246,7 @@ function processEventCleanup(calendarEvents, calendarEventsIds, icsEventsIds, ta
       var currentID = calendarEventsIds[i];
       var feedIndex = icsEventsIds.indexOf(currentID);
       
-      if(feedIndex  == -1){
+      if(feedIndex  == -1 && calendarEvents[i].recurringEventId == null){
         Logger.log("Deleting old Event " + currentID);
         try{
           Calendar.Events.remove(targetCalendarId, calendarEvents[i].id);
@@ -270,11 +264,10 @@ function processTasks(responses){
   
   var existingTasks = Tasks.Tasks.list(taskList.id).items || [];
   var existingTasksIds = []
-  Logger.log("Grabbed " + existingTasks.length + " existing Tasks from " + taskList.title);
+  Logger.log("Fetched " + existingTasks.length + " existing Tasks from " + taskList.title);
   for (var i = 0; i < existingTasks.length; i++){
     existingTasksIds[i] = existingTasks[i].id;
   }
-  Logger.log("Saved " + existingTasksIds.length + " existing Task IDs");
   
   var icsTasksIds = [];
   var vtasks = [];
@@ -286,14 +279,14 @@ function processTasks(responses){
     vtasks = [].concat(component.getAllSubcomponents("vtodo"), vtasks);
   }
   vtasks.forEach(function(task){ icsTasksIds.push(task.getFirstPropertyValue('uid').toString()); });
-  Logger.log("---Processing " + vtasks.length + " Tasks.");
   
+  Logger.log("---Processing " + vtasks.length + " Tasks.");
   for each (var task in vtasks){
     var newtask = Tasks.newTask();
     newtask.id = task.getFirstPropertyValue("uid").toString();
     newtask.title = task.getFirstPropertyValue("summary").toString();
-    var d = task.getFirstPropertyValue("due").toJSDate();
-    newtask.due = (d.getFullYear()) + "-" + ("0"+(d.getMonth()+1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2) + "T" + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2)+"Z";
+    var dueDate = task.getFirstPropertyValue("due").toJSDate();
+    newtask.due = (dueDate.getFullYear()) + "-" + ("0"+(dueDate.getMonth()+1)).slice(-2) + "-" + ("0" + dueDate.getDate()).slice(-2) + "T" + ("0" + dueDate.getHours()).slice(-2) + ":" + ("0" + dueDate.getMinutes()).slice(-2) + ":" + ("0" + dueDate.getSeconds()).slice(-2)+"Z";
     Tasks.Tasks.insert(newtask, taskList.id);
   };
   Logger.log("---Done!");
