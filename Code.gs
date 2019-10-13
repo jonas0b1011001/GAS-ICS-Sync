@@ -154,9 +154,9 @@ function main(){
       event.removeProperty('dtstamp');
       var icalEvent = new ICAL.Event(event);
       if (onlyFutureEvents && (icalEvent.endDate.toJSDate().getTime()<StartUpdate)) {
-        var recur = event.getFirstPropertyValue('rrule');
-        if (recur!=null) {
+        if (event.hasProperty('rrule')) {
           Logger.log("Modifying recurrence of previous Event " + event.getFirstPropertyValue('uid').toString());
+          var recur = event.getFirstPropertyValue('rrule');
           var dtstart = event.getFirstPropertyValue('dtstart');
           var iter = recur.iterator(dtstart);
           var rngSearch = nowICAL;
