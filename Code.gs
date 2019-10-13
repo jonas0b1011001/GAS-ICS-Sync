@@ -67,9 +67,6 @@ var targetCalendarId;
 var response = [];
 
 function main(){
-  //Retreve milliseconds from 1970 of StartUpdate
-  if (onlyFutureEvents)
-    var StartUpdate = (new Date()).getTime();
 
   //Get URL items
   for each (var url in sourceCalendarURLs){
@@ -152,17 +149,40 @@ function main(){
     var calendarTz = Calendar.Settings.get("timezone").value;
     var calendarUTCOffset = 0;
     
+    var nowICAL = new ICAL.Time.fromJSDate(new Date());
     vevents.forEach(function(event){
       event.removeProperty('dtstamp');
+      var icalEvent = new ICAL.Event(event);
+      if (onlyFutureEvents && (icalEvent.endDate.toJSDate().getTime()<StartUpdate)) {
+        var recur = event.getFirstPropertyValue('rrule');
+        if (recur!=null) {
+          Logger.log("Modifying recurrence of previous Event " + event.getFirstPropertyValue('uid').toString());
+          var dtstart = event.getFirstPropertyValue('dtstart');
+          var iter = recur.iterator(dtstart);
+          var rngSearch = nowICAL;
+          var newStartDate;
+          for (var next = iter.next(); next; next = iter.next()) {
+            if (next.compare(rngSearch) < 0) {
+              continue;
+            }
+            newStartDate = next;
+            break;
+          }
+          if (newStartDate != null){
+            var diff = newStartDate.subtractDate(icalEvent.startDate);
+            icalEvent.endDate.addDuration(diff);
+            icalEvent.startDate = newStartDate;
+            icalEvent.lastModified = nowICAL;
+          }
+        } else {
+          icsEventIds.splice(icsEventIds.indexOf(event.getFirstPropertyValue('uid').toString()),1);
+          Logger.log("Skipping previous Event " + event.getFirstPropertyValue('uid').toString());
+          return;
+        }
+      }
       var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, event.toString()).toString();
       if(calendarEventsMD5s.indexOf(digest) >= 0){
         Logger.log("Skipping unchanged Event " + event.getFirstPropertyValue('uid').toString());
-        return;
-      }  
-      var icalEvent = new ICAL.Event(event);
-      if (onlyFutureEvents && (icalEvent.endDate.toJSDate().getTime()<StartUpdate)) {
-        icsEventIds.splice(icsEventIds.indexOf(event.getFirstPropertyValue('uid').toString()),1);
-        Logger.log("Skipping previous Event " + event.getFirstPropertyValue('uid').toString());
         return;
       }
       var newEvent = Calendar.newEvent();
