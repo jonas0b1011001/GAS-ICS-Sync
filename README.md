@@ -1,4 +1,4 @@
-<a href="https://drive.google.com/open?id=1vHwCz1dGsBzapoxPjxkhMRzDI71q-eeFZdr6dw0vnl13IlVxVLQepJS_">Script Download</a>
+<a href="/" onclick="return false;"><s>Script Download</s></a>
 
 This script is a rework of <a href="https://github.com/derekantrican/GAS-ICS-Sync">derekantrican/GAS-ICS-Sync</a> modified to use the Google Calendar API v3.
 
@@ -9,10 +9,11 @@ This script is a rework of <a href="https://github.com/derekantrican/GAS-ICS-Syn
     </ul></li>
   <li>Support of VTODO-Elements</li>
   <li><ul>Full Recurrence support
-    <li>RRULE, RDATE, EXDATE, RECURRENCE-ID</li></ul></li>
+    <li>RRULE, EXRULE, RDATE, EXDATE, RECURRENCE-ID</li></ul></li>
   <li><ul>Full mapping of ICAL properties to Google Calendar Event Properties
-    <li>Attendees (Name, Mail, Response), Status, Sequence, Class, Transp</li>
+    <li>Attendees (Name, Mail, Response), Status, <s>Sequence</s>, Class, Transp, URL</li>
     </ul></li>
   <li>EMail notification when an event is updated by the script</li>
   <li>Exponential Backoff to handle API-throttling</li>
+  <li>Option to skip past events (+ event instances of recurring events)</li>
 </ul>
