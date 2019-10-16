@@ -22,14 +22,11 @@ function Install(){
   
   //Custom error for restriction here: https://developers.google.com/apps-script/reference/script/clock-trigger-builder#everyMinutes(Integer)
   var validFrequencies = [1, 5, 10, 15, 30];
-  if (Math.floor(howFrequent/60/24)>=1){
-    ScriptApp.newTrigger("startSync").timeBased().everyHours(Math.floor(howFrequent/60)).create();
-  } else if (Math.floor(howFrequent/60)>=1){
-    ScriptApp.newTrigger("startSync").timeBased().everyHours(Math.floor(howFrequent/60)).create();
-  } else if(validFrequencies.indexOf(howFrequent) != -1) {
-    ScriptApp.newTrigger("startSync").timeBased().everyMinutes(howFrequent).create();
-  } else {
-    throw "[ERROR] Invalid value for \"howFrequent\". Must be either 1, 5, 10, 15, 30, or over 60...";
+  if (howFrequent < 1)){
+    throw "[ERROR] \"howFrequent\" must be greater than 0.";
+  }
+  else{
+    ScriptApp.newTrigger("startSync").timeBased().after(howFrequent * 60 * 1000).create();
   }
 }
 
