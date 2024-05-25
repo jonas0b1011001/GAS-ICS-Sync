@@ -52,7 +52,7 @@ function formatDate(date) {
 /**
  * Takes an intended frequency in minutes and adjusts it to be the closest
  * acceptable value to use Google "everyMinutes" trigger setting (i.e. one of
- * the following values: 1, 5, 10, 15, 30).
+ * the following values: 5, 10, 15, 30).
  *
  * @param {?integer} The manually set frequency that the user intends to set.
  * @return {integer} The closest valid value to the intended frequency setting. Defaulting to 15 if no valid input is provided.
@@ -124,7 +124,6 @@ function deleteAllTriggers(){
 /**
  * Gets the ressource from the specified URLs.
  *
- * @param {Array.string} sourceCalendarURLs - Array with URLs to fetch
  * @return {Array.string} The ressources fetched from the specified URLs
  */
 function getSourceCalendarEvents(){
@@ -166,6 +165,34 @@ function getSourceCalendarEvents(){
     reportOverallFailure = true;
   }
   return result;
+}
+
+/**
+ * Gets all events from a specified google calendar id.
+ *
+ * @return {Array.string} The events fetched from the specified URLs
+ */
+function getTargetCalendarEvents() {
+  let eventList = callWithBackoff(function () {
+    return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=${calendarConfig.sourceURL}`, maxResults: 2500 });
+  }, defaultMaxRetries);
+  calendarEvents = [].concat(calendarEvents, eventList.items);
+  //loop until we received all events
+  while (typeof eventList.nextPageToken !== 'undefined') {
+    eventList = callWithBackoff(function () {
+      return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=${calendarConfig.sourceURL}`, maxResults: 2500, pageToken: eventList.nextPageToken });
+    }, defaultMaxRetries);
+
+    if (eventList != null)
+      calendarEvents = [].concat(calendarEvents, eventList.items);
+  }
+  Logger.log(`Fetched ${calendarEvents.length} events from ${calendarConfig.targetCalendarName}`);
+  for (var i = 0; i < calendarEvents.length; i++) {
+    if (calendarEvents[i].extendedProperties != null) {
+      calendarEventsIds[i] = calendarEvents[i].extendedProperties.private["rec-id"] || calendarEvents[i].extendedProperties.private["id"];
+      calendarEventsMD5s[i] = calendarEvents[i].extendedProperties.private["MD5"];
+    }
+  }
 }
 
 /**

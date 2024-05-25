@@ -129,26 +129,3 @@ function startSync(){
     throw new Error('The sync operation produced errors. See log for details.');
   }
 }
-
-function getTargetCalendarEvents() {
-  let eventList = callWithBackoff(function () {
-    return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=${calendarConfig.sourceURL}`, maxResults: 2500 });
-  }, defaultMaxRetries);
-  calendarEvents = [].concat(calendarEvents, eventList.items);
-  //loop until we received all events
-  while (typeof eventList.nextPageToken !== 'undefined') {
-    eventList = callWithBackoff(function () {
-      return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=${calendarConfig.sourceURL}`, maxResults: 2500, pageToken: eventList.nextPageToken });
-    }, defaultMaxRetries);
-
-    if (eventList != null)
-      calendarEvents = [].concat(calendarEvents, eventList.items);
-  }
-  Logger.log(`Fetched ${calendarEvents.length} events from ${calendarConfig.targetCalendarName}`);
-  for (var i = 0; i < calendarEvents.length; i++) {
-    if (calendarEvents[i].extendedProperties != null) {
-      calendarEventsIds[i] = calendarEvents[i].extendedProperties.private["rec-id"] || calendarEvents[i].extendedProperties.private["id"];
-      calendarEventsMD5s[i] = calendarEvents[i].extendedProperties.private["MD5"];
-    }
-  }
-}
