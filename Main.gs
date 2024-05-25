@@ -52,7 +52,7 @@ var reportOverallFailure = false;
 function startSync(){
   if (PropertiesService.getUserProperties().getProperty('LastRun') > 0 && (new Date().getTime() - PropertiesService.getUserProperties().getProperty('LastRun')) < 360000) {
     Logger.log("Another iteration is currently running! Exiting...");
-    return;
+    //return;
   }
 
   PropertiesService.getUserProperties().setProperty('LastRun', new Date().getTime());
@@ -73,13 +73,13 @@ function startSync(){
     //------------------------ Get target calendar information------------------------
     var targetCalendar = setupTargetCalendar(calendarConfig.targetCalendarName);
     targetCalendarId = targetCalendar.id;
-    Logger.log(`Syncing '${calendarConfig.sourceCalendarName}' (URL: ${calendarConfig.sourceURL}) to ${calendarConfig.targetCalendarName} (ID: ${targetCalendarId}`);
+    Logger.log(`Syncing '${calendarConfig.sourceCalendarName}' (URL: ${calendarConfig.sourceURL}) to ${calendarConfig.targetCalendarName} (ID: ${targetCalendarId})`);
     //------------------------ Parse existing events --------------------------
     if (calendarConfig.addEventsToCalendar || calendarConfig.modifyExistingEvents || calendarConfig.removeEventsFromCalendar){
-      var response = getSourceCalendarEvents(calendarConfig);
+      var response = getSourceCalendarEvents();
       getTargetCalendarEvents();
       //------------------------ Parse ical events --------------------------
-      vevents = parseSourceCalendarEvents(response, icsEventsIds);
+      vevents = parseSourceCalendarEvents(response);
       Logger.log(`Parsed ${vevents.length} events from ical sources`);
     }
 
@@ -106,7 +106,7 @@ function startSync(){
     }
 
     //------------------------ Process Tasks ------------------------
-    if (addTasks){
+    if (calendarConfig.addTasks){
       processTasks(responses);
     }
 
@@ -144,7 +144,7 @@ function getTargetCalendarEvents() {
     if (eventList != null)
       calendarEvents = [].concat(calendarEvents, eventList.items);
   }
-  Logger.log("Fetched " + calendarEvents.length + " existing events from " + targetCalendarName);
+  Logger.log(`Fetched ${calendarEvents.length} events from ${calendarConfig.targetCalendarName}`);
   for (var i = 0; i < calendarEvents.length; i++) {
     if (calendarEvents[i].extendedProperties != null) {
       calendarEventsIds[i] = calendarEvents[i].extendedProperties.private["rec-id"] || calendarEvents[i].extendedProperties.private["id"];

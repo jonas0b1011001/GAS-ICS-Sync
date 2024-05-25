@@ -129,9 +129,9 @@ function deleteAllTriggers(){
  */
 function getSourceCalendarEvents(){
   let url = calendarConfig.sourceURL.replace("webcal://", "https://");
-
+  let result;
   try {
-    callWithBackoff(function() {
+    result = callWithBackoff(function() {
       var urlResponse = UrlFetchApp.fetch(url, { 'validateHttpsCertificates' : false, 'muteHttpExceptions' : true });
       if (urlResponse.getResponseCode() == 200){
         var icsContent = urlResponse.getContentText()
@@ -165,6 +165,7 @@ function getSourceCalendarEvents(){
   catch (e) {
     reportOverallFailure = true;
   }
+  return result;
 }
 
 /**
@@ -587,7 +588,7 @@ function processEvent(event, calendarTz){
         newEvent = callWithBackoff(function(){
           return Calendar.Events.update(newEvent, targetCalendarId, calendarEvents[index].id);
         }, defaultMaxRetries);
-        if (newEvent != null && emailSummary){
+        if (newEvent != null && calendarConfig.emailSummary){
           modifiedEvents.push([[oldEvent.summary, newEvent.summary, oldEvent.start.date||oldEvent.start.dateTime, newEvent.start.date||newEvent.start.dateTime, oldEvent.end.date||oldEvent.end.dateTime, newEvent.end.date||newEvent.end.dateTime, oldEvent.location, newEvent.location, oldEvent.description, newEvent.description], targetCalendarName]);
         }
       }
@@ -598,7 +599,7 @@ function processEvent(event, calendarTz){
         newEvent = callWithBackoff(function(){
           return Calendar.Events.insert(newEvent, targetCalendarId);
         }, defaultMaxRetries);
-        if (newEvent != null && emailSummary){
+        if (newEvent != null && calendarConfig.emailSummary){
           addedEvents.push([[newEvent.summary, newEvent.start.date||newEvent.start.dateTime, newEvent.end.date||newEvent.end.dateTime, newEvent.location, newEvent.description], targetCalendarName]);
         }
       }
