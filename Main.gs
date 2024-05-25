@@ -71,7 +71,7 @@ function startSync(){
     vevents = [];
 
     //------------------------ Get target calendar information------------------------
-    var targetCalendar = setupTargetCalendar(calendarConfig.targetCalendarName);
+    var targetCalendar = setupTargetCalendar();
     targetCalendarId = targetCalendar.id;
     Logger.log(`Syncing '${calendarConfig.sourceCalendarName}' (URL: ${calendarConfig.sourceURL}) to ${calendarConfig.targetCalendarName} (ID: ${targetCalendarId})`);
     //------------------------ Parse existing events --------------------------

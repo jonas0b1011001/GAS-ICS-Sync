@@ -175,16 +175,16 @@ function getSourceCalendarEvents(){
  * @param {string} targetCalendarName - The name of the calendar to return
  * @return {Calendar} The calendar retrieved or created
  */
-function setupTargetCalendar(targetCalendarName){
+function setupTargetCalendar(){
   var targetCalendar = Calendar.CalendarList.list({showHidden: true, maxResults: 250}).items.filter(function(cal) {
-    return ((cal.summaryOverride || cal.summary) == targetCalendarName) &&
+    return ((cal.summaryOverride || cal.summary) == calendarConfig.targetCalendarName) &&
                 (cal.accessRole == "owner" || cal.accessRole == "writer");
   })[0];
 
   if(targetCalendar == null){
-    Logger.log("Creating Calendar: " + targetCalendarName);
+    Logger.log("Creating Calendar: " + calendarConfig.targetCalendarName);
     targetCalendar = Calendar.newCalendar();
-    targetCalendar.summary = targetCalendarName;
+    targetCalendar.summary = calendarConfig.targetCalendarName;
     targetCalendar.description = "Created by GAS";
     targetCalendar.timeZone = Calendar.Settings.get("timezone").value;
     targetCalendar = Calendar.Calendars.insert(targetCalendar);
