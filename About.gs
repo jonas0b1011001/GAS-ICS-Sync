@@ -2,20 +2,55 @@
 *=========================================
 *            GAS-ICS-Sync v6.0
 *-----------------------------------------
-*       INSTALLATION INSTRUCTIONS
+*              INSTRUCTIONS
 *=========================================
 *
-* 1) Make a copy:
-*      Go to the project overview icon on the left (looks like this: ⓘ), then click the "copy" icon on the top right (looks like two files on top of each other)
-* 2) Settings:
-*      Open Settings.gs and adjust the options to your linking
-* 3) Install:
-*      Make sure your toolbar says "install" to the right of "Debug", then click "Run"
-* 4) Authorize: You will be prompted to authorize the program and will need to click "Advanced" > "Go to GAS-ICS-Sync (unsafe)"
-*    (For steps to follow in authorization, see this video: https://youtu.be/_5k10maGtek?t=1m22s )
-* 5) You can also run "startSync" if you want to sync only once (change the dropdown to the right of "Debug" from "install" to "startSync")
+* 1) Make a local Copy:
+*      - Click on the project overview icon on the left (ⓘ icon).
+*      - Click the "Copy" icon (two files on top of each other) on the top right to make a copy of the project.
 *
-* **To stop the Script from running change the dropdown to the right of "Debug" from "install" to "uninstall"
+* 2) Configure Settings:
+*      - Open the `Settings.gs` file.
+*      - Adjust the configuration options as per your requirements (e.g., sync interval, email settings).
+*
+* Note: For the following steps, ensure `Main.gs` is open.
+*
+* 3) Install the Script:
+*      - Ensure that the dropdown menu to the right of "Debug" says "install".
+*      - Click the "Run" button to install the script.
+*      - After Installation is complete, a sync will be started automatically.
+*
+* 4) Authorize the Script:
+*      - You will be prompted to authorize the script.
+*      - Click "Advanced" > "Go to GAS-ICS-Sync (unsafe)".
+*      - Follow the on-screen prompts to complete the authorization.
+*      - (For detailed steps, refer to this video: https://youtu.be/_5k10maGtek?t=1m22s).
+*
+* 5) Sync Calendars:
+*      - To start the sync immediately, change the dropdown menu to the right of "Debug" from "install" to "startSync" and click "Run".
+*      - The script will now sync your calendars based on the configured settings.
+*
+* 6) Uninstall the Script:
+*      - To stop the script, change the dropdown menu to the right of "Debug" from "install" to "uninstall" and click "Run".
+*
+*=========================================
+*              HOW TO UPDATE
+*=========================================
+*
+* To update the script, you have two options:
+*
+* Option 1: Manually Update Files
+*      - Go to the GitHub repository: https://github.com/derekantrican/GAS-ICS-Sync
+*      - Open your existing Google Apps Script project.
+*      - Manually replace the old files with the new ones from GitHub.
+*
+* Option 2: Create a New Copy
+*      - Go to the GitHub repository: https://github.com/derekantrican/GAS-ICS-Sync
+*      - Click on the link to the latest release.
+*      - Make a copy of the latest release.
+*      - Open your existing `Settings.gs` file and copy your current settings.
+*      - Paste the copied settings into the `Settings.gs` file of the new project.
+*      - Follow the installation steps above to reinstall and authorize the new script.
 *
 *=========================================
 *           ABOUT THE AUTHOR
