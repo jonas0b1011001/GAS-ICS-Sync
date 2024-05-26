@@ -1309,7 +1309,7 @@ function callWithBackoff(func, maxRetries) {
  */
 function checkForUpdate(){
   // No need to check if we can't alert anyway
-  if (email == "")
+  if (appSettings.email == "")
     return;
 
   var lastAlertedVersion = PropertiesService.getScriptProperties().getProperty("alertedForNewVersion");
