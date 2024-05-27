@@ -52,6 +52,17 @@
 *      - Paste the copied settings into the `Settings.gs` file of the new project.
 *      - Follow the installation steps above to reinstall and authorize the new script.
 *
+* Option 3: Use Git and clasp (Advanced)
+*      - Install Git: https://git-scm.com/
+*      - Install clasp (Command Line Apps Script): https://github.com/google/clasp
+*      - Clone the repository locally: 'git clone https://github.com/derekantrican/GAS-ICS-Sync.git'
+*      - Navigate to the project directory: 'cd GAS-ICS-Sync'
+*      - Log in to your Google account with clasp: 'clasp login'
+*      - Create a new Google Apps Script project or use an existing one and link it with clasp: 'clasp create' or 'clasp clone <SCRIPT_ID>'
+*      - Create a '.claspignore' file in the project directory and add 'Settings.gs' to prevent your settings from being overwritten
+*      - Push the local files to Google Apps Script: 'clasp push'
+*      - Follow the installation steps above to reinstall and authorize the updated script.
+*
 *=========================================
 *           ABOUT THE AUTHOR
 *=========================================
