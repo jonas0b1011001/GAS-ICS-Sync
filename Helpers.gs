@@ -242,12 +242,18 @@ function parseSourceCalendarEvents(response){
   
   allEvents = filterResults(allEvents);
 
-  if (calendarConfig.color != undefined)
-    allEvents.forEach(function(event){event.updatePropertyWithValue("color", calendarConfig.color);});
-
   var calName = component.getFirstPropertyValue("x-wr-calname") || component.getFirstPropertyValue("name");
   if (calName != null)
-    allEvents.forEach(function(event){event.updatePropertyWithValue("parentCal", calName); });
+    allEvents.forEach(function(event){event.updatePropertyWithValue("name", calName); });
+
+  if (calendarConfig.overrides){
+    Logger.log(`Applying ${Object.keys(calendarConfig.overrides).length} override(s)`);
+    allEvents.forEach(function(event){
+      for(let overrideProp in calendarConfig.overrides){
+        event.updatePropertyWithValue(overrideProp, calendarConfig.overrides[overrideProp]);
+      }
+    });
+  }
 
   allEvents.forEach(function(event){
     if (!event.hasProperty('uid')){
@@ -757,8 +763,8 @@ function createEvent(event, calendarTz){
     }
   }
 
-  if (calendarConfig.addCalToTitle && event.hasProperty('parentCal')){
-    var calName = event.getFirstPropertyValue('parentCal');
+  if (calendarConfig.addCalToTitle && event.hasProperty('name')){
+    var calName = event.getFirstPropertyValue('name');
     newEvent.summary = "(" + calName + ") " + newEvent.summary;
   }
 
@@ -768,12 +774,9 @@ function createEvent(event, calendarTz){
   if (event.hasProperty('location'))
     newEvent.location = icalEvent.location;
 
-  var validVisibilityValues = ["default", "public", "private", "confidential"];
-  if ( validVisibilityValues.includes(calendarConfig.overrideVisibility.toLowerCase()) ) {
-    newEvent.visibility = calendarConfig.overrideVisibility.toLowerCase();
-  } else if (event.hasProperty('class')){
+  if (event.hasProperty('class')){
     var classString = event.getFirstPropertyValue('class').toString().toLowerCase();
-    if (validVisibilityValues.includes(classString))
+    if (["default", "public", "private", "confidential"].indexOf(classString) > -1)
       newEvent.visibility = classString;
   }
 

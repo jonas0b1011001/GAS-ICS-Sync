@@ -19,7 +19,6 @@ const appSettings = {
 */
 
 const defaultSettings = {
-  color: null,
   addEventsToCalendar: true,
   modifyExistingEvents: true,
   removePastEventsFromCalendar: true,
@@ -30,8 +29,8 @@ const defaultSettings = {
   addAlerts: "default",
   addAttendees: false,
   defaultAllDayReminder: null,
-  overrideVisibility: "",
   addTasks: false,
+  overrides: {},
   filters: []
 };
 
@@ -61,14 +60,14 @@ const sourceCalendars = [
   sourceCalendarName: "Calendar x",                    //Required
   sourceURL: "http://CalXURL.ics",                     //Required
   targetCalendarName: "Target Calendar",               //Required
-  color: 5
+  overrides: {color: 5}
   },
   {
   sourceCalendarName: "Calendar y",                    //Required
   sourceURL: "http://CalYURL.ics",                     //Required
   targetCalendarName: "Target Calendar",               //Required
-  color: 5,
-  addCalToTitle: false
+  overrides: {color: 11, name: 'prefix'},
+  addCalToTitle: true
   }
 ];
 
