@@ -300,6 +300,10 @@ function filterResults(events){
     }
   });
 
+  if (!calendarConfig.filters){
+    return;
+  }
+  
   Logger.log(`Applying ${calendarConfig.filters.length} filter(s) on ${events.length} events.`);
 
   for (var filterID of calendarConfig.filters){
