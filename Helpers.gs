@@ -174,13 +174,13 @@ function getSourceCalendarEvents(){
  */
 function getTargetCalendarEvents() {
   let eventList = callWithBackoff(function () {
-    return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=${calendarConfig.sourceURL}`, maxResults: 2500 });
+    return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=true`, maxResults: 2500 });
   }, defaultMaxRetries);
   calendarEvents = [].concat(calendarEvents, eventList.items);
   //loop until we received all events
   while (typeof eventList.nextPageToken !== 'undefined') {
     eventList = callWithBackoff(function () {
-      return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=${calendarConfig.sourceURL}`, maxResults: 2500, pageToken: eventList.nextPageToken });
+      return Calendar.Events.list(targetCalendarId, { showDeleted: false, privateExtendedProperty: `fromGAS=true`, maxResults: 2500, pageToken: eventList.nextPageToken });
     }, defaultMaxRetries);
 
     if (eventList != null)
@@ -841,7 +841,7 @@ function createEvent(event, calendarTz){
     newEvent.recurrence = parseRecurrenceRule(event, calendarUTCOffset);
   }
 
-  newEvent.extendedProperties = { private: { MD5 : digest, fromGAS : calendarConfig.sourceURL, id : icalEvent.uid } };
+  newEvent.extendedProperties = { private: { MD5 : digest, fromGAS : true, id : icalEvent.uid } };
 
   if (event.hasProperty('recurrence-id')){
     newEvent.recurringEventId = event.getFirstPropertyValue('recurrence-id').toString();
@@ -872,7 +872,7 @@ function processEventInstance(recEvent){
   var eventInstanceToPatch = callWithBackoff(function(){
     return Calendar.Events.list(targetCalendarId,
       { singleEvents : true,
-        privateExtendedProperty : `fromGAS=${calendarConfig.sourceURL}`,
+        privateExtendedProperty : `fromGAS=true`,
         privateExtendedProperty : "rec-id=" + recEvent.extendedProperties.private["id"] + "_" + recEvent.recurringEventId
       }).items;
   }, defaultMaxRetries);
@@ -890,7 +890,7 @@ function processEventInstance(recEvent){
           orderBy : "startTime",
           maxResults: 1,
           timeMin : recEvent.recurringEventId,
-          privateExtendedProperty : `fromGAS=${calendarConfig.sourceURL}`,
+          privateExtendedProperty : `fromGAS=true`,
           privateExtendedProperty : "id=" + recEvent.extendedProperties.private["id"]
         }).items;
     }, defaultMaxRetries);
@@ -919,29 +919,34 @@ function processEventInstance(recEvent){
  * If removePastEventsFromCalendar is set to false, events that have taken place will not be removed.
  */
 function processEventCleanup(){
-  for (var i = 0; i < calendarEvents.length; i++){
-      var currentID = calendarEventsIds[i];
-      var feedIndex = icsEventsIds.indexOf(currentID);
+  for (let targetCal in allEventsPerTargetCalendar) {
+    let targetCalendarEvents = allEventsPerTargetCalendar[targetCal].targetCalendarEvents;
+    let sourceEventIDs = allEventsPerTargetCalendar[targetCal].sourceEventIDs;
+    Logger.log(`Checking ${targetCalendarEvents.length} events for removal in ${allEventsPerTargetCalendar[targetCal].calendarName} (${targetCal})`);
+    for (var i = 0; i < targetCalendarEvents.length; i++){
+      var currentID = targetCalendarEvents[i].extendedProperties.private["rec-id"] || targetCalendarEvents[i].extendedProperties.private["id"];;
+      var feedIndex = sourceEventIDs.indexOf(currentID);
 
       if(feedIndex  == -1                                             // Event is no longer in source
-        && calendarEvents[i].recurringEventId == null                 // And it's not a recurring event
+        && targetCalendarEvents[i].recurringEventId == null                 // And it's not a recurring event
         && (                                                          // And one of:
           calendarConfig.removePastEventsFromCalendar                                // We want to remove past events
-          || new Date(calendarEvents[i].start.dateTime) > new Date()  // Or the event is in the future
-          || new Date(calendarEvents[i].start.date) > new Date()      // (2 different ways event start can be stored)
+          || new Date(targetCalendarEvents[i].start.dateTime) > new Date()  // Or the event is in the future
+          || new Date(targetCalendarEvents[i].start.date) > new Date()      // (2 different ways event start can be stored)
         )
       )
       {
-        Logger.log("Deleting old event " + currentID);
+        Logger.log(`Deleting old event ${targetCalendarEvents[i].summary} (${currentID})`);
         callWithBackoff(function(){
-          Calendar.Events.remove(targetCalendarId, calendarEvents[i].id);
+          Calendar.Events.remove(targetCal, targetCalendarEvents[i].id);
         }, defaultMaxRetries);
 
         if (appSettings.emailSummary){
-          removedEvents.push([[calendarEvents[i].summary, calendarEvents[i].start.date||calendarEvents[i].start.dateTime, calendarEvents[i].end.date||calendarEvents[i].end.dateTime, calendarEvents[i].location, calendarEvents[i].description], calendarConfig.targetCalendarName]);
+          removedEvents.push([[targetCalendarEvents[i].summary, targetCalendarEvents[i].start.date||targetCalendarEvents[i].start.dateTime, targetCalendarEvents[i].end.date||targetCalendarEvents[i].end.dateTime, targetCalendarEvents[i].location, targetCalendarEvents[i].description], calendarConfig.targetCalendarName]);
         }
       }
     }
+  }
 }
 
 /**

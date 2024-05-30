@@ -41,6 +41,7 @@ var vevents = [];
 var calendarConfig;
 
 // Per-session global variables (must NOT be reset before processing each new calendar!)
+var allEventsPerTargetCalendar = {};
 var addedEvents = [];
 var modifiedEvents = [];
 var removedEvents = [];
@@ -80,6 +81,11 @@ function startSync(){
       //------------------------ Parse ical events --------------------------
       vevents = parseSourceCalendarEvents(response);
       Logger.log(`Parsed ${vevents.length} events from ical sources`);
+      // Update allEventsPerTargetCalendar
+      if (!allEventsPerTargetCalendar[targetCalendarId]) {
+        allEventsPerTargetCalendar[targetCalendarId] = { sourceEventIDs: [], targetCalendarEvents: calendarEvents, calendarName: calendarConfig.targetCalendarName};
+      }
+      allEventsPerTargetCalendar[targetCalendarId].sourceEventIDs = allEventsPerTargetCalendar[targetCalendarId].sourceEventIDs.concat(icsEventsIds);
     }
 
     //------------------------ Process ical events ------------------------
@@ -97,13 +103,6 @@ function startSync(){
       Logger.log("Done processing events");
     }
 
-    //------------------------ Remove old events from calendar ------------------------
-    if (calendarConfig.removeEventsFromCalendar){
-      Logger.log(`Checking ${calendarEvents.length} events for removal`);
-      processEventCleanup();
-      Logger.log("Done checking events for removal");
-    }
-
     //------------------------ Process Tasks ------------------------
     if (calendarConfig.addTasks){
       processTasks(responses);
@@ -114,6 +113,12 @@ function startSync(){
     for (var recEvent of recurringEvents){
       processEventInstance(recEvent);
     }
+  }
+
+  //------------------------ Remove old events from calendar ------------------------
+  if (calendarConfig.removeEventsFromCalendar){
+    processEventCleanup();
+    Logger.log("Done checking events for removal");
   }
 
   if ((addedEvents.length + modifiedEvents.length + removedEvents.length) > 0 && emailSummary){
