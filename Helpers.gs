@@ -298,6 +298,10 @@ function filterResults(events){
 
   for (var filterID of calendarConfig.filters){
     let filter = filters[filterID];
+    if (!filter){
+      Logger.log(`Invalid filter id: ${filterID}`);
+      continue;
+    }
     filter.parameter = filter.parameter.toLowerCase();
     events = events.filter(function(event){
       try{
