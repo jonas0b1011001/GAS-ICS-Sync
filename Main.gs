@@ -37,7 +37,6 @@ var icsEventsIds = [];
 var calendarEventsMD5s = [];
 var recurringEvents = [];
 var targetCalendarId;
-var targetCalendarName;
 var vevents = [];
 var calendarConfig;
 

@@ -10,31 +10,31 @@ function formatDate(date) {
   const day = date.slice(8,10);
   let formattedDate;
 
-  if (dateFormat == "YYYY/MM/DD") {
+  if (appSettings.dateFormat == "YYYY/MM/DD") {
     formattedDate = year + "/" + month + "/" + day
   }
-  else if (dateFormat == "DD/MM/YYYY") {
+  else if (appSettings.dateFormat == "DD/MM/YYYY") {
     formattedDate = day + "/" + month + "/" + year
   }
-  else if (dateFormat == "MM/DD/YYYY") {
+  else if (appSettings.dateFormat == "MM/DD/YYYY") {
     formattedDate = month + "/" + day + "/" + year
   }
-  else if (dateFormat == "YYYY-MM-DD") {
+  else if (appSettings.dateFormat == "YYYY-MM-DD") {
     formattedDate = year + "-" + month + "-" + day
   }
-  else if (dateFormat == "DD-MM-YYYY") {
+  else if (appSettings.dateFormat == "DD-MM-YYYY") {
     formattedDate = day + "-" + month + "-" + year
   }
-  else if (dateFormat == "MM-DD-YYYY") {
+  else if (appSettings.dateFormat == "MM-DD-YYYY") {
     formattedDate = month + "-" + day + "-" + year
   }
-  else if (dateFormat == "YYYY.MM.DD") {
+  else if (appSettings.dateFormat == "YYYY.MM.DD") {
     formattedDate = year + "." + month + "." + day
   }
-  else if (dateFormat == "DD.MM.YYYY") {
+  else if (appSettings.dateFormat == "DD.MM.YYYY") {
     formattedDate = day + "." + month + "." + year
   }
-  else if (dateFormat == "MM.DD.YYYY") {
+  else if (appSettings.dateFormat == "MM.DD.YYYY") {
     formattedDate = month + "." + day + "." + year
   }
 
@@ -628,8 +628,8 @@ function processEvent(event, calendarTz){
         newEvent = callWithBackoff(function(){
           return Calendar.Events.update(newEvent, targetCalendarId, calendarEvents[index].id);
         }, defaultMaxRetries);
-        if (newEvent != null && calendarConfig.emailSummary){
-          modifiedEvents.push([[oldEvent.summary, newEvent.summary, oldEvent.start.date||oldEvent.start.dateTime, newEvent.start.date||newEvent.start.dateTime, oldEvent.end.date||oldEvent.end.dateTime, newEvent.end.date||newEvent.end.dateTime, oldEvent.location, newEvent.location, oldEvent.description, newEvent.description], targetCalendarName]);
+        if (newEvent != null && appSettings.emailSummary){
+          modifiedEvents.push([[oldEvent.summary, newEvent.summary, oldEvent.start.date||oldEvent.start.dateTime, newEvent.start.date||newEvent.start.dateTime, oldEvent.end.date||oldEvent.end.dateTime, newEvent.end.date||newEvent.end.dateTime, oldEvent.location, newEvent.location, oldEvent.description, newEvent.description], calendarConfig.targetCalendarName]);
         }
       }
     }
@@ -639,8 +639,8 @@ function processEvent(event, calendarTz){
         newEvent = callWithBackoff(function(){
           return Calendar.Events.insert(newEvent, targetCalendarId);
         }, defaultMaxRetries);
-        if (newEvent != null && calendarConfig.emailSummary){
-          addedEvents.push([[newEvent.summary, newEvent.start.date||newEvent.start.dateTime, newEvent.end.date||newEvent.end.dateTime, newEvent.location, newEvent.description], targetCalendarName]);
+        if (newEvent != null && appSettings.emailSummary){
+          addedEvents.push([[newEvent.summary, newEvent.start.date||newEvent.start.dateTime, newEvent.end.date||newEvent.end.dateTime, newEvent.location, newEvent.description], calendarConfig.targetCalendarName]);
         }
       }
     }
@@ -747,7 +747,7 @@ function createEvent(event, calendarTz){
     if (organizerMail)
       newEvent.organizer.email = organizerMail.toString();
 
-    if (addOrganizerToTitle && organizerName){
+    if (calendarConfig.addOrganizerToTitle && organizerName){
         newEvent.summary = organizerName + ": " + newEvent.summary;
     }
   }
@@ -780,7 +780,7 @@ function createEvent(event, calendarTz){
 
   if (icalEvent.startDate.isDate){
     if (0 <= calendarConfig.defaultAllDayReminder && calendarConfig.defaultAllDayReminder <= 40320){
-      newEvent.reminders = { 'useDefault' : false, 'overrides' : [{'method' : 'popup', 'minutes' : defaultAllDayReminder}]};//reminder as defined by the user
+      newEvent.reminders = { 'useDefault' : false, 'overrides' : [{'method' : 'popup', 'minutes' : calendarConfig.defaultAllDayReminder}]};//reminder as defined by the user
     }
     else{
       newEvent.reminders = { 'useDefault' : false, 'overrides' : []};//no reminder
@@ -937,8 +937,8 @@ function processEventCleanup(){
           Calendar.Events.remove(targetCalendarId, calendarEvents[i].id);
         }, defaultMaxRetries);
 
-        if (emailSummary){
-          removedEvents.push([[calendarEvents[i].summary, calendarEvents[i].start.date||calendarEvents[i].start.dateTime, calendarEvents[i].end.date||calendarEvents[i].end.dateTime, calendarEvents[i].location, calendarEvents[i].description], targetCalendarName]);
+        if (appSettings.emailSummary){
+          removedEvents.push([[calendarEvents[i].summary, calendarEvents[i].start.date||calendarEvents[i].start.dateTime, calendarEvents[i].end.date||calendarEvents[i].end.dateTime, calendarEvents[i].location, calendarEvents[i].description], calendarConfig.targetCalendarName]);
         }
       }
     }
@@ -986,7 +986,7 @@ function processTasks(responses){
 
   //-------------- Remove old Tasks -----------
   // ID can't be used as identifier as the API reassignes a random id at task creation
-  if(removeEventsFromCalendar){
+  if(calendarConfig.removeEventsFromCalendar){
     Logger.log("Checking " + existingTasksIds.length + " tasks for removal");
     for (var i = 0; i < existingTasksIds.length; i++){
       var currentID = existingTasks[i].id;
@@ -1260,7 +1260,7 @@ function sendSummary() {
 
   body += "<br/><br/>Do you have any problems or suggestions? Contact us at <a href='https://github.com/derekantrican/GAS-ICS-Sync/'>github</a>.";
   var message = {
-    to: email,
+    to: appSettings.email,
     subject: subject,
     htmlBody: body,
     name: "GAS-ICS-Sync"
@@ -1331,7 +1331,7 @@ function checkForUpdate(){
     var latestVersion = getLatestVersion();
 
     if (latestVersion > thisVersion && latestVersion != lastAlertedVersion){
-      MailApp.sendEmail(email,
+      MailApp.sendEmail(appSettings.email,
         `Version ${latestVersion} of GAS-ICS-Sync is available! (You have ${thisVersion})`,
         "You can see the latest release here: https://github.com/derekantrican/GAS-ICS-Sync/releases");
 
